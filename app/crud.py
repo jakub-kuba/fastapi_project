@@ -11,7 +11,8 @@ def get_user_by_username_or_email(db: Session, username: str, email: str):
     ).first()
 
 
-# Function to create a new user, hash the password, and store it in the database
+# Function to create a new user, hash the password,
+# and store it in the database
 def create_user(db: Session, user: schemas.UserRegister):
     hashed_password = bcrypt.hash(user.password)
     new_user = models.User(username=user.username,
