@@ -10,8 +10,9 @@ router = APIRouter()
 
 
 @router.post("/register")
-async def register_user(user: schemas.UserRegister, db: Session = Depends(database.get_db)):
-    # Check if the user with the same username or email already exists in the database
+async def register_user(user: schemas.UserRegister,
+                        db: Session = Depends(database.get_db)):
+    # Check if the user with the same username or email already exists
     existing_user = crud.get_user_by_username_or_email(
         db, user.username, user.email)
     if existing_user:

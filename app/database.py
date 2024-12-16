@@ -25,8 +25,8 @@ def get_db():
     """
     Dependency to handle database sessions.
     """
-    db = SessionLocal()  # Create a new database session
+    db = SessionLocal()
     try:
         yield db  # Yield the session to the route handler
     finally:
-        db.close()  # Ensure the session is closed after the request is finished
+        db.close()
