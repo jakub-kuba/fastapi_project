@@ -1,5 +1,9 @@
 from fastapi import FastAPI
+from fastapi.security import OAuth2PasswordBearer
 from .routes import users
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 # Initialize FastAPI app
