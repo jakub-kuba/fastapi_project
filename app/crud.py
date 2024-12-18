@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
-from passlib.hash import bcrypt
+from sqlalchemy import or_
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from . import models, schemas
 
 # secret key and algorithm to JWT
-SECRET_KEY = "your_secret_key" # to be changed in prod
+SECRET_KEY = "your_secret_key"  # to be changed in prod
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -24,14 +24,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def get_user_by_username_or_email(db: Session, username: str = None, email: str = None):
+def get_user_by_username_or_email(db: Session,
+                                  username: str = None, email: str = None):
     """Fetches a user from the database by either username or email."""
-    query = db.query(models.User)
 
-    if username:
-        query = query.filter(models.User.username == username)
-    if email:
-        query = query.filter(models.User.email == email)
+    query = db.query(models.User).filter(or_(
+        models.User.username == username,
+        models.User.email == email
+    ))
 
     return query.first()
 
@@ -40,7 +40,7 @@ def create_user(db: Session, user_data: schemas.UserRegister):
     """Creates a new user in the database."""
     hashed_password = hash_password(user_data.password)
     db_user = models.User(
-        username = user_data.username,
+        username=user_data.username,
         email=user_data.email,
         password=hashed_password
     )
@@ -52,10 +52,15 @@ def create_user(db: Session, user_data: schemas.UserRegister):
     # Refresh the instance to get the latest data (e.g., generated ID)
     db.refresh(db_user)
 
+    return db_user
+
 
 def authenticate_user(db: Session, username: str, password: str):
-    """Authenticates a user by checking if the username and password are correct."""
-     # Fetch user by username
+    """
+    Authenticates a user by checking if
+    the username and password are correct.
+    """
+    # Fetch user by username
     user = get_user_by_username_or_email(db, username=username)
     # Verify the provided password
     if user and verify_password(password, user.password):
@@ -65,12 +70,13 @@ def authenticate_user(db: Session, username: str, password: str):
 
 
 def create_access_token(data: dict,
-                        expires_delta: timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
+                        expires_delta: timedelta = timedelta(
+                            minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
     """Generates JWT token for a user."""
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire})
-    
+
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
