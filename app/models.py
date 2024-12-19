@@ -14,3 +14,11 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
+
+
+class MusicTable(Base):
+    __tablename__ = "music_table"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True, nullable=False)
+    composer = Column(String)
+    rhythm = Column(String)
