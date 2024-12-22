@@ -1,10 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .. import schemas, crud, database
+from fastapi.security import OAuth2PasswordBearer
 
 
 # Initialize the APIRouter instance for user-related endpoints
 router = APIRouter()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 @router.post("/register")
@@ -61,3 +64,35 @@ async def login_user(user: schemas.UserLogin,
         "access_token": access_token,
         "token_type": "bearer",
     }
+
+
+@router.get("/music")
+async def get_music_table(db: Session = Depends(database.get_db),
+                          token: str = Depends(oauth2_scheme)):
+    # verify user via token
+    user = crud.get_logged_in_user(db, token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    music_entries = crud.get_music_table_content(db)
+    if not music_entries:
+        raise HTTPException(status_code=404, detail="No music records found")
+    result = [
+        {"title": record.title,
+         "composer": record.composer,
+         "rhythm": record.rhythm}
+        for record in music_entries
+    ]
+    return {"music_entries": result}
+
+
+@router.get("/me")
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(database.get_db)
+):
+    user = crud.get_logged_in_user(db, token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    return {"username": user.username, "email": user.email}

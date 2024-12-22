@@ -8,7 +8,7 @@ from . import models, schemas
 # secret key and algorithm to JWT
 SECRET_KEY = "your_secret_key"  # to be changed in prod
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 5
 
 # Initialize bcrypt context for hashing passwords
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -85,6 +85,32 @@ def verify_token(token: str):
     """Verifies the JWT token and returns the decoded data."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload if payload["exp"] >= datetime.utcnow() else None
+        exp_datetime = datetime.fromtimestamp(payload["exp"])
+        return payload if exp_datetime >= datetime.utcnow() else None
     except JWTError:
         return None
+
+
+def get_logged_in_user(db: Session, token: str):
+    """Verifies the token and fetches the logged-in user from the database."""
+    # Verify the token
+    token_data = verify_token(token)
+    if not token_data:
+        return None
+
+    # Extract the username from the token
+    username = token_data.get("sub")
+    if not username:
+        return None
+
+    # Fetch the user from the database
+    user = get_user_by_username_or_email(db, username=username)
+    return user
+
+
+def get_music_table_content(db: Session):
+    """Shows content of music table"""
+    records = db.query(models.MusicTable.title,
+                       models.MusicTable.composer,
+                       models.MusicTable.rhythm).all()
+    return records
