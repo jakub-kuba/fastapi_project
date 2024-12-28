@@ -55,8 +55,13 @@ async def login_user(user: schemas.UserLogin,
             status_code=401, detail="Invalid username or password"
         )
 
+    # get current token version from teh database
+    current_token_version = authenticated_user.token_version
+
     # Generate JWT token for a logged user
-    access_token = crud.create_access_token(data={"sub": user.username})
+    access_token = crud.create_access_token(
+        data={"sub": user.username,
+              "version": current_token_version})
 
     # Return message
     return {
@@ -96,3 +101,19 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     return {"username": user.username, "email": user.email}
+
+
+@router.post("/logout")
+async def logout_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(database.get_db)
+):
+    user = crud.get_logged_in_user(db, token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    # Increment token_version in the database
+    user.token_version += 1
+    db.commit()
+
+    return {"message": f"{user.username} Successfully logged out"}

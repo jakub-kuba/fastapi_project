@@ -75,7 +75,7 @@ def create_access_token(data: dict,
     """Generates JWT token for a user."""
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "version": data.get("version", 0)})
 
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -100,11 +100,23 @@ def get_logged_in_user(db: Session, token: str):
 
     # Extract the username from the token
     username = token_data.get("sub")
-    if not username:
+    token_version = token_data.get("version")
+    if not username or token_version is None:
         return None
+
+    print("token_data:", token_data)
+    print("username:", username)
+    print("token_version:", token_version)
 
     # Fetch the user from the database
     user = get_user_by_username_or_email(db, username=username)
+
+    print("user", user)
+    print("user.token_version", user.token_version)
+
+    if not user or user.token_version != token_version:
+        return None
+
     return user
 
 

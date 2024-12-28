@@ -5,3 +5,4 @@ test_data/
 useful_files/
 alembic.ini
 alembic/
+run_app.py
