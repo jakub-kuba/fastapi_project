@@ -63,10 +63,42 @@ async def login_user(user: schemas.UserLogin,
         data={"sub": user.username,
               "version": current_token_version})
 
+    # generate refresh token
+    refresh_token = crud.create_refresh_token(authenticated_user)
+
     # Return message
     return {
         "message": f"{user.username} - you are logged in",
         "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/refresh")
+async def refresh_token(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(database.get_db)
+):
+    """
+    Endpoint to refresh access and refresh tokens.
+    Requires a valid refresh token.
+    """
+    # Verify the refresh token and get the user
+    user = crud.verify_refresh_token(token, db)
+    if not user:
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired refresh token")
+
+    # Generate new tokens
+    access_token = crud.create_access_token(
+        data={"sub": user.username,
+              "version": user.token_version})
+    refresh_token = crud.create_refresh_token(user)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
     }
 
@@ -112,8 +144,7 @@ async def logout_user(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    # Increment token_version in the database
-    user.token_version += 1
-    db.commit()
+    # user logout
+    crud.logout_user(db, user)
 
-    return {"message": f"{user.username} Successfully logged out"}
+    return {"message": f"{user.username} successfully logged out"}

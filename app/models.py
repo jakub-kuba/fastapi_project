@@ -15,11 +15,12 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
     token_version = Column(Integer, default=0)
+    refresh_token_version = Column(Integer, default=0)
 
 
 class MusicTable(Base):
     __tablename__ = "music_table"
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True, nullable=False)
+    title = Column(String, index=True)
     composer = Column(String)
     rhythm = Column(String)
