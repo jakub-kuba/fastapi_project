@@ -8,7 +8,8 @@ from . import models, schemas
 # secret key and algorithm to JWT
 SECRET_KEY = "your_secret_key"  # to be changed in prod
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 5
+ACCESS_TOKEN_EXPIRE_MINUTES = 0.5
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Initialize bcrypt context for hashing passwords
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -81,6 +82,16 @@ def create_access_token(data: dict,
     return encoded_jwt
 
 
+def create_refresh_token(user: models.User):
+    """Generates a refresh token for a user."""
+    data = {
+        "sub": user.username,
+        "version": user.refresh_token_version,
+        "exp": datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+    }
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+
+
 def verify_token(token: str):
     """Verifies the JWT token and returns the decoded data."""
     try:
@@ -89,6 +100,25 @@ def verify_token(token: str):
         return payload if exp_datetime >= datetime.utcnow() else None
     except JWTError:
         return None
+
+
+def verify_refresh_token(token: str, db: Session):
+    """Verifies a refresh token and ensures it is still valid."""
+    payload = verify_token(token)
+    if not payload:
+        return None
+
+    username = payload.get("sub")
+    version = payload.get("version")
+
+    if not username or version is None:
+        return None
+
+    user = get_user_by_username_or_email(db, username=username)
+    if not user or user.refresh_token_version != version:
+        return None
+
+    return user
 
 
 def get_logged_in_user(db: Session, token: str):
@@ -118,6 +148,13 @@ def get_logged_in_user(db: Session, token: str):
         return None
 
     return user
+
+
+def logout_user(db: Session, user: models.User):
+    """Increments the token version, effectively invalidating old tokens."""
+    user.token_version += 1
+    user.refresh_token_version += 1
+    db.commit()
 
 
 def get_music_table_content(db: Session):
