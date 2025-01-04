@@ -157,9 +157,11 @@ def logout_user(db: Session, user: models.User):
     db.commit()
 
 
-def get_music_table_content(db: Session):
+def get_tunes_table_content(db: Session):
     """Shows content of music table"""
-    records = db.query(models.MusicTable.title,
-                       models.MusicTable.composer,
-                       models.MusicTable.rhythm).all()
+    records = db.query(models.Tunes.title,
+                       models.Tunes.composer,
+                       models.Tunes.rhythm,
+                       models.Tunes.link,
+                       models.Tunes.description).all()
     return records

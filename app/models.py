@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -17,10 +18,28 @@ class User(Base):
     token_version = Column(Integer, default=0)
     refresh_token_version = Column(Integer, default=0)
 
+    proposals = relationship("Proposals", back_populates="user")
 
-class MusicTable(Base):
-    __tablename__ = "music_table"
+
+class Tunes(Base):
+    __tablename__ = "tunes"
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
+    title = Column(String, nullable=False)
     composer = Column(String)
     rhythm = Column(String)
+    difficulty = Column(Integer)
+    progress = Column(Integer)
+    link = Column(String)
+    description = Column(String)
+    demo = Column(Boolean, default=False)
+
+
+class Proposals(Base):
+    __tablename__ = "proposals"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    composer = Column(String)
+    info = Column(String)
+
+    user = relationship("User", back_populates="proposals")

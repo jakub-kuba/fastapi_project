@@ -17,3 +17,35 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class TuneCreate(BaseModel):
+    title: str
+    composer: str = None
+    rhythm: str = None
+    difficulty: int = None
+    progress: int = None
+    link: str = None
+    description: str = None
+    demo: bool = False
+
+
+class Tune(TuneCreate):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+class ProposalCreate(BaseModel):
+    user_id: int
+    title: str
+    composer: str = None
+    info: str = None
+
+
+class Proposal(ProposalCreate):
+    id: int
+
+    class Config:
+        orm_mode = True

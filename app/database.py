@@ -1,16 +1,12 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .models import Base
 
 # SQLite database URL
-DATABASE_URL = "sqlite:///./test_data/users.db"
-
-# Ensure the directory for the database exists
-os.makedirs("test_data", exist_ok=True)
+DATABASE_URL = "postgresql://J:123@localhost/music"
 
 # Create the SQLAlchemy engine for the database
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL)
 
 # Create a sessionmaker factory for database sessions
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
