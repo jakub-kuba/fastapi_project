@@ -111,7 +111,8 @@ async def get_music_table(db: Session = Depends(database.get_db),
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    music_entries = crud.get_music_table_content(db)
+    # music_entries = crud.get_music_table_content(db)
+    music_entries = crud.get_tunes_table_content(db)
     if not music_entries:
         raise HTTPException(status_code=404, detail="No music records found")
     result = [
