@@ -17,6 +17,7 @@ class User(Base):
     password = Column(String, nullable=False)
     token_version = Column(Integer, default=0)
     refresh_token_version = Column(Integer, default=0)
+    role = Column(String, default='user')
 
     proposals = relationship("Proposals", back_populates="user")
 

@@ -165,3 +165,36 @@ def get_tunes_table_content(db: Session):
                        models.Tunes.link,
                        models.Tunes.description).all()
     return records
+
+
+def create_proposal(db: Session,
+                    proposal_data: schemas.ProposalCreate, user_id: int):
+    """Creates a new record in the proposal table"""
+    new_proposal = models.Proposals(
+        user_id=user_id,
+        title=proposal_data.title,
+        composer=proposal_data.composer,
+        info=proposal_data.info
+    )
+    db.add(new_proposal)
+    db.commit()
+    db.refresh(new_proposal)
+
+    return new_proposal
+
+
+def get_proposal_content(db: Session):
+    """Shows content of proposals"""
+    records = (
+        db.query(
+            models.Proposals.user_id,
+            models.Proposals.title,
+            models.Proposals.composer,
+            models.Proposals.info,
+            models.User.username,
+            models.User.email
+        )
+        .join(models.User, models.Proposals.user_id == models.User.id)
+        .all()
+    )
+    return records

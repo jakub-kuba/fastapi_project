@@ -111,7 +111,6 @@ async def get_music_table(db: Session = Depends(database.get_db),
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    # music_entries = crud.get_music_table_content(db)
     music_entries = crud.get_tunes_table_content(db)
     if not music_entries:
         raise HTTPException(status_code=404, detail="No music records found")
@@ -136,6 +135,31 @@ async def get_current_user(
     return {"username": user.username, "email": user.email}
 
 
+@router.post("/proposals")
+async def add_proposal(
+    proposal: schemas.ProposalCreate,
+    db: Session = Depends(database.get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    """
+    Endpoint to add a new record to proposals table
+    Available for users logged in
+    """
+    user = crud.get_logged_in_user(db, token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    # add a new record
+    new_proposal = crud.create_proposal(db, proposal, user.id)
+
+    return {
+        "message": (
+            f"{user.username} has added "
+            f"a new proposal: {new_proposal.title}"
+        )
+    }
+
+
 @router.post("/logout")
 async def logout_user(
     token: str = Depends(oauth2_scheme),
@@ -149,3 +173,26 @@ async def logout_user(
     crud.logout_user(db, user)
 
     return {"message": f"{user.username} successfully logged out"}
+
+
+@router.get("/proposals")
+async def get_proposals(db: Session = Depends(database.get_db),
+                        token: str = Depends(oauth2_scheme)):
+    # verify admin user via token
+    user = crud.get_logged_in_user(db, token)
+    if not user or user.role != "admin":
+        raise HTTPException(
+            status_code=403, detail="Admin privileges required")
+
+    proposal_entries = crud.get_proposal_content(db)
+    if not proposal_entries:
+        raise HTTPException(status_code=404, detail="No proposal found")
+    result = [
+        {"username": record.username,
+         "email": record.email,
+         "title": record.title,
+         "composer": record.composer,
+         "info": record.info}
+        for record in proposal_entries
+    ]
+    return {"proposal_entries": result}

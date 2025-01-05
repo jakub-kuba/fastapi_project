@@ -38,7 +38,6 @@ class Tune(TuneCreate):
 
 
 class ProposalCreate(BaseModel):
-    user_id: int
     title: str
     composer: str = None
     info: str = None
