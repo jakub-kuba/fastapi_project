@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 # Schema for registering a user, validated using Pydantic
 
@@ -28,6 +29,17 @@ class TuneCreate(BaseModel):
     link: str = None
     description: str = None
     demo: bool = False
+
+
+class TuneUpdate(BaseModel):
+    title: Optional[str]
+    composer: Optional[str]
+    rhythm: Optional[str]
+    difficulty: Optional[int]
+    progress: Optional[int]
+    link: Optional[str]
+    description: Optional[str]
+    demo: Optional[bool]
 
 
 class Tune(TuneCreate):

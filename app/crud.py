@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
@@ -8,7 +8,7 @@ from . import models, schemas
 # secret key and algorithm to JWT
 SECRET_KEY = "your_secret_key"  # to be changed in prod
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 0.5
+ACCESS_TOKEN_EXPIRE_MINUTES = 1
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Initialize bcrypt context for hashing passwords
@@ -157,13 +157,38 @@ def logout_user(db: Session, user: models.User):
     db.commit()
 
 
-def get_tunes_table_content(db: Session):
-    """Shows content of music table"""
-    records = db.query(models.Tunes.title,
-                       models.Tunes.composer,
-                       models.Tunes.rhythm,
-                       models.Tunes.link,
-                       models.Tunes.description).all()
+def get_tunes_table_content(db: Session,
+                            user_authenticated: bool,
+                            is_admin: bool):
+    """
+    Shows content of music table based on user role
+    and authentication status.
+    """
+    query = db.query(
+        models.Tunes.id,
+        models.Tunes.title,
+        models.Tunes.composer,
+        models.Tunes.rhythm,
+        models.Tunes.link,
+        models.Tunes.description,
+        models.Tunes.demo,
+        models.Tunes.progress
+    )
+
+    if is_admin:
+        # Admins see all tunes
+        records = query.all()
+    elif user_authenticated:
+        records = db.query(models.Tunes).filter(
+            and_(
+                models.Tunes.link != "",
+                models.Tunes.progress > 89
+            )
+        ).all()
+    else:
+        # Unauthenticated users see only tunes with demo = True
+        records = query.filter(models.Tunes.demo.is_(True)).all()
+
     return records
 
 
@@ -198,3 +223,52 @@ def get_proposal_content(db: Session):
         .all()
     )
     return records
+
+
+def create_tune(db: Session, tune_data: schemas.TuneCreate):
+    """Creates new tune in the database"""
+    new_tune = models.Tunes(
+        title=tune_data.title,
+        composer=tune_data.composer,
+        rhythm=tune_data.rhythm,
+        difficulty=tune_data.difficulty,
+        progress=tune_data.progress,
+        link=tune_data.link,
+        description=tune_data.description,
+        demo=tune_data.demo
+    )
+    db.add(new_tune)
+    db.commit()
+    db.refresh(new_tune)
+
+    return new_tune
+
+
+def update_tune(db: Session, tune_id: int, tune_data: schemas.TuneUpdate):
+    """Updates existing tune based on id"""
+    tune = db.query(models.Tunes).filter(models.Tunes.id == tune_id).first()
+
+    if not tune:
+        return None
+
+    if tune_data.title is not None:
+        tune.title = tune_data.title
+    if tune_data.composer is not None:
+        tune.composer = tune_data.composer
+    if tune_data.rhythm is not None:
+        tune.rhythm = tune_data.rhythm
+    if tune_data.difficulty is not None:
+        tune.difficulty = tune_data.difficulty
+    if tune_data.progress is not None:
+        tune.progress = tune_data.progress
+    if tune_data.link is not None:
+        tune.link = tune_data.link
+    if tune_data.description is not None:
+        tune.description = tune_data.description
+    if tune_data.demo is not None:
+        tune.demo = tune_data.demo
+
+    db.commit()
+    db.refresh(tune)
+
+    return tune

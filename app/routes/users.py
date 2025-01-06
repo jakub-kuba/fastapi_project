@@ -106,20 +106,41 @@ async def refresh_token(
 @router.get("/music")
 async def get_music_table(db: Session = Depends(database.get_db),
                           token: str = Depends(oauth2_scheme)):
-    # verify user via token
+    # Verify user via token
     user = crud.get_logged_in_user(db, token)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user_authenticated = bool(user)
+    is_admin = user.role == "admin" if user else False
 
-    music_entries = crud.get_tunes_table_content(db)
+    music_entries = crud.get_tunes_table_content(
+        db, user_authenticated, is_admin)
+
     if not music_entries:
         raise HTTPException(status_code=404, detail="No music records found")
-    result = [
-        {"title": record.title,
-         "composer": record.composer,
-         "rhythm": record.rhythm}
-        for record in music_entries
-    ]
+
+    if is_admin:
+        result = [
+            {"id": record.id,
+             "title": record.title,
+             "composer": record.composer,
+             "rhythm": record.rhythm,
+             "link": record.link,
+             "description": record.description,
+             "demo": record.demo,
+             "progress": record.progress}
+            for record in music_entries
+        ]
+
+    else:
+
+        result = [
+            {"title": record.title,
+             "composer": record.composer,
+             "rhythm": record.rhythm,
+             "link": record.link,
+             "description": record.description}
+            for record in music_entries
+        ]
+
     return {"music_entries": result}
 
 
@@ -196,3 +217,40 @@ async def get_proposals(db: Session = Depends(database.get_db),
         for record in proposal_entries
     ]
     return {"proposal_entries": result}
+
+
+@router.post("/tunes")
+async def add_tune(
+    tune: schemas.TuneCreate,
+    db: Session = Depends(database.get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    """Endpoint for an admin that enables adding a new tune"""
+    user = crud.get_logged_in_user(db, token)
+    if not user or user.role != "admin":
+        raise HTTPException(
+            status_code=403, detail="Admin privileges required")
+
+    new_tune = crud.create_tune(db, tune)
+
+    return {"message": "Tune added successfully", "tune_id": new_tune.id}
+
+
+@router.put("/tunes/{tune_id}")
+async def update_tune(
+    tune_id: int,
+    tune: schemas.TuneUpdate,
+    db: Session = Depends(database.get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    """Endpoint for an admin, that enables to edit the tune based on its id"""
+    user = crud.get_logged_in_user(db, token)
+    if not user or user.role != "admin":
+        raise HTTPException(
+            status_code=403, detail="Admin privileges required")
+
+    updated_tune = crud.update_tune(db, tune_id, tune)
+    if not updated_tune:
+        raise HTTPException(status_code=404, detail="Tune not found")
+
+    return {"message": "Tune updated successfully", "tune_id": updated_tune.id}
