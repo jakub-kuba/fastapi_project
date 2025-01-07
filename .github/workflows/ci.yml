@@ -11,6 +11,18 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Set up Docker
+      run: |
+        docker --version
+
+    - name: Build Docker image
+      run: |
+        docker build -t myapp .
+
+    - name: Run Docker container
+      run: |
+        docker run -d --name myapp-container myapp
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -20,6 +32,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        
+
     - name: Lint with flake8
       run: flake8 .
+
+    - name: Clean up Docker container
+      run: |
+        docker rm -f myapp-container  # delete container when finished
+
+    - name: Docker image clean up
+      run: |
+        docker rmi myapp  # delete image when finished
