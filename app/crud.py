@@ -3,10 +3,15 @@ from sqlalchemy import or_, and_
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
+from dotenv import load_dotenv
 from . import models, schemas
+import os
+
+# read .env
+load_dotenv()
 
 # secret key and algorithm to JWT
-SECRET_KEY = "your_secret_key"  # to be changed in prod
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1
 REFRESH_TOKEN_EXPIRE_DAYS = 7
