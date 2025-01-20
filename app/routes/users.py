@@ -32,8 +32,10 @@ async def register_user(user: schemas.UserRegister,
     # create a new user
     new_user = crud.create_user(db, user)
 
-    # Return a success message with the user ID
-    return {"message": "User registered successfully", "user_id": new_user.id}
+    print(f"User{new_user.username} registered successfully.")
+    print(f"User id: {new_user.id}")
+
+    return schemas.UserResponse.from_orm(new_user)
 
 
 @router.post("/login")
