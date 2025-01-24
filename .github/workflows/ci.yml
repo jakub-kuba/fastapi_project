@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
@@ -17,12 +17,12 @@ jobs:
         docker --version
         docker-compose --version || echo "docker-compose not found" 
 
-    # Install Docker Compose if not installed
+    # Install Docker Compose using official script
     - name: Install Docker Compose
       run: |
-        sudo apt-get update
-        sudo apt-get install -y docker-compose-plugin
-        docker compose version  # Check Docker Compose version
+        sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version  # Check Docker Compose version
 
     # Build Docker image
     - name: Build Docker image
