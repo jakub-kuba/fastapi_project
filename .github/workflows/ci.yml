@@ -11,36 +11,52 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    # Set up Docker
     - name: Set up Docker
       run: |
         docker --version
-        docker-compose --version
+        docker-compose --version || echo "docker-compose not found" 
 
+    # Install Docker Compose if not installed
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-compose-plugin
+        docker compose version  # Check Docker Compose version
+
+    # Build Docker image
     - name: Build Docker image
       run: |
-        docker-compose build
+        docker compose build
 
+    # Run tests
     - name: Run tests
       run: |
-        docker-compose run --rm app pytest -v
+        docker compose run --rm app pytest -v
 
+    # Set up Python
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.x'
 
+    # Install dependencies
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    # Lint with flake8
     - name: Lint with flake8
-      run: flake8 .
+      run: |
+        docker compose exec app flake8 .
 
+    # Clean up Docker containers and network
     - name: Clean up Docker container
       run: |
-        docker-compose down
+        docker compose down
 
+    # Docker image clean up
     - name: Docker image clean up
       run: |
         docker rmi myapp  # delete image when finished
