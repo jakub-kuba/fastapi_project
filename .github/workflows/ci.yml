@@ -14,14 +14,15 @@ jobs:
     - name: Set up Docker
       run: |
         docker --version
+        docker-compose --version
 
     - name: Build Docker image
       run: |
-        docker build -t myapp .
+        docker-compose build
 
-    - name: Run Docker container
+    - name: Run tests
       run: |
-        docker run -d --name myapp-container myapp
+        docker-compose run --rm app pytest -v
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -38,7 +39,7 @@ jobs:
 
     - name: Clean up Docker container
       run: |
-        docker rm -f myapp-container  # delete container when finished
+        docker-compose down
 
     - name: Docker image clean up
       run: |

@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # copy all the files to container
 COPY . .
 
+# set environment variable for unbuffered output in Python (helps with logging)
+ENV PYTHONUNBUFFERED 1
+
 # oper port 8000
 EXPOSE 8000
 
