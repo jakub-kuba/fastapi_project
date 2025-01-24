@@ -15,7 +15,7 @@ jobs:
     - name: Set up Docker
       run: |
         docker --version
-        docker-compose --version || echo "docker-compose not found" 
+        docker-compose --version || echo "docker-compose not found"
 
     # Install Docker Compose using official script
     - name: Install Docker Compose
@@ -24,39 +24,28 @@ jobs:
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version  # Check Docker Compose version
 
-    # Build Docker image
-    - name: Build Docker image
+    # Build and test with Docker Compose
+    - name: Run tests
+      env:
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_NAME: ${{ secrets.DB_NAME }}
       run: |
         docker compose build
-
-    # Run tests
-    - name: Run tests
-      run: |
         docker compose run --rm app pytest -v
-
-    # Set up Python
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-
-    # Install dependencies
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
 
     # Lint with flake8
     - name: Lint with flake8
+      env:
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_NAME: ${{ secrets.DB_NAME }}
       run: |
+        docker compose up -d  # Start containers in detached mode
         docker compose exec app flake8 .
+        docker compose down  # Stop and clean up containers
 
-    # Clean up Docker containers and network
-    - name: Clean up Docker container
-      run: |
-        docker compose down
-
-    # Docker image clean up
+    # Clean up Docker images
     - name: Docker image clean up
       run: |
-        docker rmi myapp  # delete image when finished
+        docker rmi myapp || echo "Image already removed"
