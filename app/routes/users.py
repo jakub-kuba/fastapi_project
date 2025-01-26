@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .. import schemas, crud, database
 from fastapi.security import OAuth2PasswordBearer
+from app.utils.sending_email import send_confirmation_email
 
 
 # Initialize the APIRouter instance for user-related endpoints
@@ -32,7 +33,9 @@ async def register_user(user: schemas.UserRegister,
     # create a new user
     new_user = crud.create_user(db, user)
 
-    print(f"User{new_user.username} registered successfully.")
+    await send_confirmation_email(user.email)
+
+    print(f"User {new_user.username} registered successfully.")
     print(f"User id: {new_user.id}")
 
     return schemas.UserResponse.from_orm(new_user)

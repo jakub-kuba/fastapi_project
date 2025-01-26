@@ -72,7 +72,7 @@ class TuneCreate(BaseModel):
     difficulty: Optional[int] = None
     progress: Optional[int] = None
     link: Optional[str] = None
-    description: Optional[constr(min_length=1, max_length=250)] = None
+    description: Optional[constr(min_length=1, max_length=400)] = None
     demo: bool = False
 
     @validator('difficulty')
