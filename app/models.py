@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import declarative_base
+from datetime import datetime
 
 # Create the base class for SQLAlchemy models
 Base = declarative_base()
@@ -14,6 +15,8 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
+    is_confirmed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
     token_version = Column(Integer, default=0)
     refresh_token_version = Column(Integer, default=0)
     role = Column(String, default='user')

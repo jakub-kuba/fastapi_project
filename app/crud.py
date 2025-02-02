@@ -277,3 +277,24 @@ def update_tune(db: Session, tune_id: int, tune_data: schemas.TuneUpdate):
     db.refresh(tune)
 
     return tune
+
+
+def remove_unconfirmed_users(db: Session):
+    """
+    Removes unconfirmed users
+    who have not confirmed their email within 1 hour.
+    """
+    one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    print(f"Current time (UTC): {datetime.utcnow()}")
+    print(f"One hour ago (UTC): {one_hour_ago}")
+    unconfirmed_users = db.query(models.User).filter(
+        models.User.is_confirmed.is_(False),
+        models.User.created_at < one_hour_ago
+    ).all()
+
+    print("len unconfirmed users:", len(unconfirmed_users))
+
+    for user in unconfirmed_users:
+        db.delete(user)
+
+    db.commit()

@@ -18,11 +18,17 @@ conf = ConnectionConfig(
 )
 
 
-async def send_confirmation_email(email: EmailStr):
+async def send_confirmation_email(email: EmailStr, confirmation_link: str):
     message = MessageSchema(
         subject="Registration confirmation",
         recipients=[email],
-        html="Thank you for registering in my application!",
+        html=(
+            "Thank you for registering in my application! "
+            "Please confirm your registration by clicking the following link: "
+            f"<a href='{confirmation_link}'>Confirm Registration</a>. "
+            "If you do not confirm your email within one hour, "
+            "your account will be deleted."
+        ),
         subtype="html"
     )
 
