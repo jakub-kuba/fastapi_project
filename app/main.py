@@ -3,6 +3,10 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 from .routes import users
 from pydantic import ValidationError
+from apscheduler.schedulers.background import BackgroundScheduler
+from app.database import SessionLocal
+from app.crud import remove_unconfirmed_users
+from datetime import datetime
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -28,3 +32,27 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
 @app.get("/")
 async def root():
     return {"message": "This is my project"}
+
+# Initialize the scheduler
+scheduler = BackgroundScheduler()
+
+# Function to remove unconfirmed users with a database session
+
+
+def scheduled_remove_unconfirmed_users():
+    print(f"Scheduler running at {datetime.utcnow()}")
+    db = SessionLocal()
+    try:
+        remove_unconfirmed_users(db)
+    finally:
+        db.close()
+
+
+# Add the job to the scheduler
+scheduler.add_job(scheduled_remove_unconfirmed_users, 'interval', minutes=30)
+scheduler.start()
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    scheduler.shutdown()

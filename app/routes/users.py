@@ -3,6 +3,11 @@ from sqlalchemy.orm import Session
 from .. import schemas, crud, database
 from fastapi.security import OAuth2PasswordBearer
 from app.utils.sending_email import send_confirmation_email
+import os
+from datetime import timedelta
+
+
+BASE_URL = os.getenv("BASE_URL")
 
 
 # Initialize the APIRouter instance for user-related endpoints
@@ -33,7 +38,16 @@ async def register_user(user: schemas.UserRegister,
     # create a new user
     new_user = crud.create_user(db, user)
 
-    await send_confirmation_email(user.email)
+    # create a token what will be valid for 1 hour
+    confirmation_token = crud.create_access_token(
+        data={"sub": user.username},
+        expires_delta=timedelta(hours=1)
+    )
+
+    # create a confirmation link that will appear in the email
+    confirmation_link = f"{BASE_URL}/users/confirm?token={confirmation_token}"
+
+    await send_confirmation_email(user.email, confirmation_link)
 
     print(f"User {new_user.username} registered successfully.")
     print(f"User id: {new_user.id}")
@@ -45,38 +59,70 @@ async def register_user(user: schemas.UserRegister,
 async def login_user(user: schemas.UserLogin,
                      db: Session = Depends(database.get_db)):
     """
-    Endpoint for user login.
-    Verifies username and password.
-    If data is correct, returns message and JWT token.
-    If data is incorrect, returns HTTP error 401.
+    Endpoint for user login. Verifies username and password.
+    If data is correct and user is confirmed, returns message and JWT token.
+    If data is incorrect or user is not confirmed, returns HTTP error.
     """
-    # User verification based on username and password
+    # Authenticate the user based on username and password
     authenticated_user = crud.authenticate_user(
         db, user.username, user.password)
 
-    # If verification failed, we return HTTP error 401
+    # If authentication fails, return HTTP 401 error
     if not authenticated_user:
         raise HTTPException(
-            status_code=401, detail="Invalid username or password"
-        )
+            status_code=401,
+            detail="Invalid username or password")
 
-    # get current token version from teh database
+    # Check if the user has confirmed their email
+    if not authenticated_user.is_confirmed:
+        raise HTTPException(
+            status_code=403,
+            detail="Please confirm your email before logging in"
+        )
+    # Retrieve current token version from the database
     current_token_version = authenticated_user.token_version
 
-    # Generate JWT token for a logged user
+    # Generate JWT access token for the logged-in user
     access_token = crud.create_access_token(
         data={"sub": user.username,
               "version": current_token_version})
 
-    # generate refresh token
+    # Generate refresh token for the user
     refresh_token = crud.create_refresh_token(authenticated_user)
 
-    # Return message
+    # Return success message and tokens
     return {
         "message": f"{user.username} - you are logged in",
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
+    }
+
+
+@router.get("/confirm")
+async def confirm_registration(token: str,
+                               db: Session = Depends(database.get_db)):
+    """
+    Endpoint to confirm user registration.
+    Validates the token and sets the user's is_confirmed status to True.
+    """
+    user_data = crud.verify_token(token)
+    if not user_data:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user = crud.get_user_by_username_or_email(db, username=user_data["sub"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Set is_confirmed to True to activate the user's account
+    user.is_confirmed = True
+    db.commit()
+
+    return {
+        "message": (
+            "Email confirmed. "
+            "Please log in to complete the registration process."
+        )
     }
 
 
