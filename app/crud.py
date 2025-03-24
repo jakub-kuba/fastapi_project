@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 from dotenv import load_dotenv
 from . import models, schemas
 import os
+import secrets
 
 # read .env
 load_dotenv()
@@ -30,14 +31,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def get_user_by_username_or_email(db: Session,
-                                  username: str = None, email: str = None):
+def get_user_by_username_or_email(
+    db: Session, username: str = None, email: str = None
+):
     """Fetches a user from the database by either username or email."""
 
-    query = db.query(models.User).filter(or_(
-        models.User.username == username,
-        models.User.email == email
-    ))
+    query = db.query(models.User).filter(
+        or_(models.User.username == username, models.User.email == email)
+    )
 
     return query.first()
 
@@ -48,7 +49,7 @@ def create_user(db: Session, user_data: schemas.UserRegister):
     db_user = models.User(
         username=user_data.username,
         email=user_data.email,
-        password=hashed_password
+        password=hashed_password,
     )
 
     # Add the new user to the session
@@ -75,9 +76,10 @@ def authenticate_user(db: Session, username: str, password: str):
     return None
 
 
-def create_access_token(data: dict,
-                        expires_delta: timedelta = timedelta(
-                            minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
+def create_access_token(
+    data: dict,
+    expires_delta: timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+):
     """Generates JWT token for a user."""
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
@@ -162,9 +164,9 @@ def logout_user(db: Session, user: models.User):
     db.commit()
 
 
-def get_tunes_table_content(db: Session,
-                            user_authenticated: bool,
-                            is_admin: bool):
+def get_tunes_table_content(
+    db: Session, user_authenticated: bool, is_admin: bool
+):
     """
     Shows content of music table based on user role
     and authentication status.
@@ -177,19 +179,18 @@ def get_tunes_table_content(db: Session,
         models.Tunes.link,
         models.Tunes.description,
         models.Tunes.demo,
-        models.Tunes.progress
+        models.Tunes.progress,
     )
 
     if is_admin:
         # Admins see all tunes
         records = query.all()
     elif user_authenticated:
-        records = db.query(models.Tunes).filter(
-            and_(
-                models.Tunes.link != "",
-                models.Tunes.progress > 89
-            )
-        ).all()
+        records = (
+            db.query(models.Tunes)
+            .filter(and_(models.Tunes.link != "", models.Tunes.progress > 89))
+            .all()
+        )
     else:
         # Unauthenticated users see only tunes with demo = True
         records = query.filter(models.Tunes.demo.is_(True)).all()
@@ -197,14 +198,15 @@ def get_tunes_table_content(db: Session,
     return records
 
 
-def create_proposal(db: Session,
-                    proposal_data: schemas.ProposalCreate, user_id: int):
+def create_proposal(
+    db: Session, proposal_data: schemas.ProposalCreate, user_id: int
+):
     """Creates a new record in the proposal table"""
     new_proposal = models.Proposals(
         user_id=user_id,
         title=proposal_data.title,
         composer=proposal_data.composer,
-        info=proposal_data.info
+        info=proposal_data.info,
     )
     db.add(new_proposal)
     db.commit()
@@ -222,7 +224,7 @@ def get_proposal_content(db: Session):
             models.Proposals.composer,
             models.Proposals.info,
             models.User.username,
-            models.User.email
+            models.User.email,
         )
         .join(models.User, models.Proposals.user_id == models.User.id)
         .all()
@@ -240,7 +242,7 @@ def create_tune(db: Session, tune_data: schemas.TuneCreate):
         progress=tune_data.progress,
         link=tune_data.link,
         description=tune_data.description,
-        demo=tune_data.demo
+        demo=tune_data.demo,
     )
     db.add(new_tune)
     db.commit()
@@ -287,10 +289,14 @@ def remove_unconfirmed_users(db: Session):
     one_hour_ago = datetime.utcnow() - timedelta(hours=1)
     print(f"Current time (UTC): {datetime.utcnow()}")
     print(f"One hour ago (UTC): {one_hour_ago}")
-    unconfirmed_users = db.query(models.User).filter(
-        models.User.is_confirmed.is_(False),
-        models.User.created_at < one_hour_ago
-    ).all()
+    unconfirmed_users = (
+        db.query(models.User)
+        .filter(
+            models.User.is_confirmed.is_(False),
+            models.User.created_at < one_hour_ago,
+        )
+        .all()
+    )
 
     print("len unconfirmed users:", len(unconfirmed_users))
 
@@ -298,3 +304,50 @@ def remove_unconfirmed_users(db: Session):
         db.delete(user)
 
     db.commit()
+
+
+def generate_reset_token(db: Session, email: str):
+    """Creates a password reset token and saves it in the database"""
+    user = db.query(models.User).filter(models.User.email == email).first()
+
+    if not user:
+        return None
+
+    user.reset_token = None
+    user.reset_token_expiry = None
+    db.commit()
+
+    reset_token = secrets.token_urlsafe(32)  # safe unique token
+    hashed_token = pwd_context.hash(reset_token)
+
+    expiry_time = datetime.utcnow() + timedelta(hours=1)  # valid for 1 h
+
+    user.reset_token = hashed_token
+    user.reset_token_expiry = expiry_time
+
+    db.commit()
+    db.refresh(user)
+
+    return reset_token
+
+
+def verify_reset_token(db: Session, token: str):
+    """Checks is reset token is valid"""
+    user = (
+        db.query(models.User)
+        .filter(models.User.reset_token.isnot(None))
+        .first()
+    )
+
+    if (
+        not user
+        or not user.reset_token_expiry
+        or user.reset_token_expiry < datetime.utcnow()
+    ):
+        return None
+
+    # hashed token verification
+    if not pwd_context.verify(token, user.reset_token):
+        return None
+
+    return user

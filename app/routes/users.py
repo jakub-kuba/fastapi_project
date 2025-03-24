@@ -2,9 +2,13 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .. import schemas, crud, database
 from fastapi.security import OAuth2PasswordBearer
-from app.utils.sending_email import send_confirmation_email
+from app.utils.sending_email import (
+    send_confirmation_email,
+    send_reset_password_email,
+)
 import os
 from datetime import timedelta
+from app.crud import generate_reset_token
 
 
 BASE_URL = os.getenv("BASE_URL")
@@ -17,8 +21,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 @router.post("/register")
-async def register_user(user: schemas.UserRegister,
-                        db: Session = Depends(database.get_db)):
+async def register_user(
+    user: schemas.UserRegister, db: Session = Depends(database.get_db)
+):
     """
     Endpoint to register a new user.
     Checks if the username or email already exists before creating a new user.
@@ -28,20 +33,21 @@ async def register_user(user: schemas.UserRegister,
     """
     # Check if the user with the same username or email already exists
     existing_user = crud.get_user_by_username_or_email(
-        db, user.username, user.email)
+        db, user.username, user.email
+    )
 
     # If user already exists, raise a 400 error with a message
     if existing_user:
         raise HTTPException(
-            status_code=400, detail="Username or email already registered")
+            status_code=400, detail="Username or email already registered"
+        )
 
     # create a new user
     new_user = crud.create_user(db, user)
 
     # create a token what will be valid for 1 hour
     confirmation_token = crud.create_access_token(
-        data={"sub": user.username},
-        expires_delta=timedelta(hours=1)
+        data={"sub": user.username}, expires_delta=timedelta(hours=1)
     )
 
     # create a confirmation link that will appear in the email
@@ -56,8 +62,9 @@ async def register_user(user: schemas.UserRegister,
 
 
 @router.post("/login")
-async def login_user(user: schemas.UserLogin,
-                     db: Session = Depends(database.get_db)):
+async def login_user(
+    user: schemas.UserLogin, db: Session = Depends(database.get_db)
+):
     """
     Endpoint for user login. Verifies username and password.
     If data is correct and user is confirmed, returns message and JWT token.
@@ -65,27 +72,28 @@ async def login_user(user: schemas.UserLogin,
     """
     # Authenticate the user based on username and password
     authenticated_user = crud.authenticate_user(
-        db, user.username, user.password)
+        db, user.username, user.password
+    )
 
     # If authentication fails, return HTTP 401 error
     if not authenticated_user:
         raise HTTPException(
-            status_code=401,
-            detail="Invalid username or password")
+            status_code=401, detail="Invalid username or password"
+        )
 
     # Check if the user has confirmed their email
     if not authenticated_user.is_confirmed:
         raise HTTPException(
             status_code=403,
-            detail="Please confirm your email before logging in"
+            detail="Please confirm your email before logging in",
         )
     # Retrieve current token version from the database
     current_token_version = authenticated_user.token_version
 
     # Generate JWT access token for the logged-in user
     access_token = crud.create_access_token(
-        data={"sub": user.username,
-              "version": current_token_version})
+        data={"sub": user.username, "version": current_token_version}
+    )
 
     # Generate refresh token for the user
     refresh_token = crud.create_refresh_token(authenticated_user)
@@ -100,8 +108,9 @@ async def login_user(user: schemas.UserLogin,
 
 
 @router.get("/confirm")
-async def confirm_registration(token: str,
-                               db: Session = Depends(database.get_db)):
+async def confirm_registration(
+    token: str, db: Session = Depends(database.get_db)
+):
     """
     Endpoint to confirm user registration.
     Validates the token and sets the user's is_confirmed status to True.
@@ -128,8 +137,7 @@ async def confirm_registration(token: str,
 
 @router.post("/refresh")
 async def refresh_token(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(database.get_db)
+    token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)
 ):
     """
     Endpoint to refresh access and refresh tokens.
@@ -139,12 +147,13 @@ async def refresh_token(
     user = crud.verify_refresh_token(token, db)
     if not user:
         raise HTTPException(
-            status_code=401, detail="Invalid or expired refresh token")
+            status_code=401, detail="Invalid or expired refresh token"
+        )
 
     # Generate new tokens
     access_token = crud.create_access_token(
-        data={"sub": user.username,
-              "version": user.token_version})
+        data={"sub": user.username, "version": user.token_version}
+    )
     refresh_token = crud.create_refresh_token(user)
 
     return {
@@ -155,40 +164,45 @@ async def refresh_token(
 
 
 @router.get("/music")
-async def get_music_table(db: Session = Depends(database.get_db),
-                          token: str = Depends(oauth2_scheme)):
+async def get_music_table(
+    db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)
+):
     # Verify user via token
     user = crud.get_logged_in_user(db, token)
     user_authenticated = bool(user)
     is_admin = user.role == "admin" if user else False
 
     music_entries = crud.get_tunes_table_content(
-        db, user_authenticated, is_admin)
+        db, user_authenticated, is_admin
+    )
 
     if not music_entries:
         raise HTTPException(status_code=404, detail="No music records found")
 
     if is_admin:
         result = [
-            {"id": record.id,
-             "title": record.title,
-             "composer": record.composer,
-             "rhythm": record.rhythm,
-             "link": record.link,
-             "description": record.description,
-             "demo": record.demo,
-             "progress": record.progress}
+            {
+                "id": record.id,
+                "title": record.title,
+                "composer": record.composer,
+                "rhythm": record.rhythm,
+                "link": record.link,
+                "description": record.description,
+                "demo": record.demo,
+                "progress": record.progress,
+            }
             for record in music_entries
         ]
 
     else:
-
         result = [
-            {"title": record.title,
-             "composer": record.composer,
-             "rhythm": record.rhythm,
-             "link": record.link,
-             "description": record.description}
+            {
+                "title": record.title,
+                "composer": record.composer,
+                "rhythm": record.rhythm,
+                "link": record.link,
+                "description": record.description,
+            }
             for record in music_entries
         ]
 
@@ -197,8 +211,7 @@ async def get_music_table(db: Session = Depends(database.get_db),
 
 @router.get("/me")
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(database.get_db)
+    token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)
 ):
     user = crud.get_logged_in_user(db, token)
     if not user:
@@ -211,7 +224,7 @@ async def get_current_user(
 async def add_proposal(
     proposal: schemas.ProposalCreate,
     db: Session = Depends(database.get_db),
-    token: str = Depends(oauth2_scheme)
+    token: str = Depends(oauth2_scheme),
 ):
     """
     Endpoint to add a new record to proposals table
@@ -234,8 +247,7 @@ async def add_proposal(
 
 @router.post("/logout")
 async def logout_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(database.get_db)
+    token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)
 ):
     user = crud.get_logged_in_user(db, token)
     if not user:
@@ -248,23 +260,27 @@ async def logout_user(
 
 
 @router.get("/proposals")
-async def get_proposals(db: Session = Depends(database.get_db),
-                        token: str = Depends(oauth2_scheme)):
+async def get_proposals(
+    db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)
+):
     # verify admin user via token
     user = crud.get_logged_in_user(db, token)
     if not user or user.role != "admin":
         raise HTTPException(
-            status_code=403, detail="Admin privileges required")
+            status_code=403, detail="Admin privileges required"
+        )
 
     proposal_entries = crud.get_proposal_content(db)
     if not proposal_entries:
         raise HTTPException(status_code=404, detail="No proposal found")
     result = [
-        {"username": record.username,
-         "email": record.email,
-         "title": record.title,
-         "composer": record.composer,
-         "info": record.info}
+        {
+            "username": record.username,
+            "email": record.email,
+            "title": record.title,
+            "composer": record.composer,
+            "info": record.info,
+        }
         for record in proposal_entries
     ]
     return {"proposal_entries": result}
@@ -274,13 +290,14 @@ async def get_proposals(db: Session = Depends(database.get_db),
 async def add_tune(
     tune: schemas.TuneCreate,
     db: Session = Depends(database.get_db),
-    token: str = Depends(oauth2_scheme)
+    token: str = Depends(oauth2_scheme),
 ):
     """Endpoint for an admin that enables adding a new tune"""
     user = crud.get_logged_in_user(db, token)
     if not user or user.role != "admin":
         raise HTTPException(
-            status_code=403, detail="Admin privileges required")
+            status_code=403, detail="Admin privileges required"
+        )
 
     new_tune = crud.create_tune(db, tune)
 
@@ -292,16 +309,72 @@ async def update_tune(
     tune_id: int,
     tune: schemas.TuneUpdate,
     db: Session = Depends(database.get_db),
-    token: str = Depends(oauth2_scheme)
+    token: str = Depends(oauth2_scheme),
 ):
     """Endpoint for an admin, that enables to edit the tune based on its id"""
     user = crud.get_logged_in_user(db, token)
     if not user or user.role != "admin":
         raise HTTPException(
-            status_code=403, detail="Admin privileges required")
+            status_code=403, detail="Admin privileges required"
+        )
 
     updated_tune = crud.update_tune(db, tune_id, tune)
     if not updated_tune:
         raise HTTPException(status_code=404, detail="Tune not found")
 
     return {"message": "Tune updated successfully", "tune_id": updated_tune.id}
+
+
+@router.post("/forgot-password/")
+async def forgot_password(
+    request: schemas.ForgotPasswordRequest,
+    db: Session = Depends(database.get_db),
+):
+    """Handles password reset requests"""
+    email = request.email
+
+    reset_token = generate_reset_token(db, email)
+
+    if not reset_token:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await send_reset_password_email(email, reset_token)
+
+    return {
+        "message": "Password reset email sent",
+        "reset_token": reset_token,
+    }
+
+
+@router.get("/reset-password")
+def reset_password_form(token: str, db: Session = Depends(database.get_db)):
+    """Displays password reset form if token is valid"""
+    user = crud.verify_reset_token(db, token)
+    if not user:
+        return {"error": "Invalid or expired token"}
+
+    return {"message": "Show reset password form here", "token": token}
+
+
+@router.post("/reset-password")
+def reset_password(
+    request: schemas.ResetPasswordRequest,
+    db: Session = Depends(database.get_db),
+):
+    """Resets the user's password if the reset token is valid."""
+    user = crud.verify_reset_token(db, request.token)
+
+    if not user:
+        return {"error": "Invalid or expired token"}
+
+    # hash new password and save it to the database
+    hashed_password = crud.hash_password(request.new_password)
+    user.password = hashed_password
+
+    # delete the used token
+    user.reset_token = None
+    user.reset_token_expiry = None
+
+    db.commit()
+
+    return {"message": "Password reset successfully"}

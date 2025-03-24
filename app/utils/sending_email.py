@@ -34,3 +34,28 @@ async def send_confirmation_email(email: EmailStr, confirmation_link: str):
 
     fm = FastMail(conf)
     await fm.send_message(message)
+
+
+def generate_reset_link(reset_token: str) -> str:
+    """Generates a password reset link"""
+    BASE_URL = os.getenv("BASE_URL")
+    return f"{BASE_URL}/users/reset-password?token={reset_token}"
+
+
+async def send_reset_password_email(email: EmailStr, reset_token: str):
+    """Sends an email with a link to reset your password"""
+    reset_link = generate_reset_link(reset_token)
+    message = MessageSchema(
+        subject="Reset Password",
+        recipients=[email],
+        html=(
+            "Someone (hopefully you) requested a password reset. "
+            "Click the link below to reset your password: "
+            f"<a href='{reset_link}'>Reset Password</a>. "
+            "This link is valid for 1 hour."
+        ),
+        subtype="html"
+    )
+
+    fm = FastMail(conf)
+    await fm.send_message(message)
