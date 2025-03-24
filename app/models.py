@@ -21,6 +21,9 @@ class User(Base):
     refresh_token_version = Column(Integer, default=0)
     role = Column(String, default='user')
 
+    reset_token = Column(String, nullable=True, unique=True)
+    reset_token_expiry = Column(DateTime, nullable=True)
+
     proposals = relationship("Proposals", back_populates="user")
 
 
