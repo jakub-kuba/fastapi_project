@@ -193,9 +193,16 @@ def get_tunes_table_content(
         )
     else:
         # Unauthenticated users see only tunes with demo = True
-        records = query.filter(models.Tunes.demo.is_(True)).all()
+        records = query.filter(models.Tunes.demo.is_(True),
+                               models.Tunes.link.isnot(None)).all()
 
     return records
+
+
+def get_demotune_by_id(db: Session, tune_id: int):
+    """Gets demo tune based in its ID"""
+    return db.query(models.Tunes).filter(models.Tunes.id == tune_id,
+                                         models.Tunes.demo).first()
 
 
 def create_proposal(
