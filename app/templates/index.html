@@ -1,0 +1,54 @@
+{% extends "template.html" %}
+{% block title %}Enter the webiste and listen to music{% endblock %}
+
+{% block content%}
+
+	<div class="top1"><a href="https://jakub-kuba.com"><img src="{{ url_for('static', path='main.png') }}" width="104" height="56" title="Home"></a></div>
+	<div class="top2"><a href="/"><img src="{{ url_for('static', path='acco3.png') }}" width="104" height="56" title="Accordion"></a></div>
+	<div class="top1"><a href="/"><img src="{{ url_for('static', path='back.png') }}" width="104" height="56" title="Back"></a></div>
+	<div style="clear:both;"></div>
+	
+
+	<div class="rectangle1">
+		<br />
+			<p><b>SIGN IN</b></p>
+			<br /><br /><br /><br />
+			<form action="tunes" method="post">
+				Username:<br /><input type="text" required name="username" value="{{username}}"/><br /><br />
+				Password:<br /><input type="password" required name="password" value="{{password}}"/><br /></p>
+				<input class="index" type="submit" value="LOG IN" />
+			</form>
+			{% for error in errors_login %}
+			<br />
+			<p class="error-message">{{error}}</p>
+			{% endfor %}
+	</div>
+	<div class="rectangle2">
+		<br />
+		<p><b>CONTINUE WITHOUT LOGIN</b></p>
+		<br /><p><br /><br /><br />
+		<a href="/demo"><img src="{{ url_for('static', path='acco2.png') }}" width="260" height="139" title="Continue as a Guest"></a>
+		<br><br>
+		{% for error in errors_tunes %}
+		<p class="error-message">{{error}}</p>
+		{% endfor %}
+	</div>
+	<div class="rectangle1">
+		<br />
+		<p><b>SIGN UP</b></p>
+		<form action="registered" method="post">
+			<br /><br />
+			<input type="text" required name="username" value="{{username}}" placeholder="Username" style="text-align: center"/><br /><br />
+			<input type="email" required name="email" value="{{email}}" placeholder="Email" style="text-align: center"/><br /><br />
+			<input type="password" required name="password" value="{{password}}" placeholder="Password" style="text-align: center"/><br /><br />
+			<input type="password" required name="password2"  placeholder="Confirm Password", style="text-align: center"/><br /><br />
+			<input class="index" type="submit" value="SIGN UP"> 
+		</form>
+		{% for error in errors %}
+		<br />
+		<p class="error-message">{{error}}</p>
+		{% endfor %}
+	</div>
+	<div style="clear:both;"></div>
+
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "template.html" %}
+{% block title %}Demo Version{% endblock %}
+
+{% block content%}
+
+	<div class="top1"><a href="https://jakub-kuba.com"><img src="{{ url_for('static', path='main.png') }}" width="104" height="56" title="Home"></a></div>
+	<div class="top2"><a href="/"><img src="{{ url_for('static', path='acco3.png') }}" width="104" height="56" title="Accordion"></a></div>
+	<div class="top1"><a href="/"><img src="{{ url_for('static', path='back.png') }}" width="104" height="56" title="Back"></a></div>
+	<div style="clear:both;"></div>
+
+    <div class="bigrectangle">
+		<h2>Demo Tunes</h2>
+		<br>
+		<table>
+			<thead>
+				<tr>
+					<th>Title</th>
+					<th>Composer</th>
+					<th>Rhythm</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for tune in demo_tunes %}
+					<tr>
+						<td><a href="{{ url_for('demodetails', tune_id=tune.id) }}">{{ tune.title }}</a></td>
+						<td>{{ tune.composer }}</td>
+						<td>{{ tune.rhythm }}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+    </div>
+    <div style="clear:both;"></div>
+
+
+{% endblock %}
