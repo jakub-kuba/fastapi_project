@@ -18,7 +18,8 @@ class UserRegister(BaseModel):
             )
         if not re.match(r"^[a-zA-Z0-9_]+$", value):
             raise ValueError(
-                "Username must contain only alphanumeric characters or underscores"
+                "Username must contain only alphanumeric characters "
+                "or underscores"
             )
         return value
 
