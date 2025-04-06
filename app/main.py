@@ -88,7 +88,10 @@ def scheduled_remove_unconfirmed_users():
 
 
 # Add the job to the scheduler
-scheduler.add_job(scheduled_remove_unconfirmed_users, "interval", minutes=30)
+# scheduler.add_job(scheduled_remove_unconfirmed_users, "interval", minutes=30)
+scheduler.add_job(
+    scheduled_remove_unconfirmed_users, "interval", minutes=2
+)  # TEMP
 scheduler.start()
 
 

@@ -6,32 +6,32 @@ import re
 
 
 class UserRegister(BaseModel):
-    username: constr(min_length=3, max_length=15)
+    username: str
     email: EmailStr
-    password: constr(min_length=8, max_length=30)
+    password: str
 
     @validator('username')
     def validate_username(cls, value):
+        if not (3 <= len(value) <= 15):
+            raise ValueError('Username length must be between 3 and 15 characters')
         if not re.match(r'^[a-zA-Z0-9_]+$', value):
             raise ValueError(
-                'Username must contain only alphanumeric characters '
-                'or underscores'
+                'Username must contain only alphanumeric characters or underscores'
             )
         return value
 
     @validator('password')
     def validate_password(cls, value):
+        if not (8 <= len(value) <= 30):
+            raise ValueError('Password length must be between 8 and 30 characters')
         if not re.search(r'[A-Z]', value):
-            raise ValueError(
-                'Password must contain at least one uppercase letter')
+            raise ValueError('Password must contain at least one uppercase letter')
         if not re.search(r'[a-z]', value):
-            raise ValueError(
-                'Password must contain at least one lowercase letter')
+            raise ValueError('Password must contain at least one lowercase letter')
         if not re.search(r'[0-9]', value):
             raise ValueError('Password must contain at least one number')
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
-            raise ValueError(
-                'Password must contain at least one special character')
+            raise ValueError('Password must contain at least one special character')
         if re.search(r'\s', value):
             raise ValueError('Password must not contain whitespace characters')
         return value

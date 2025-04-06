@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
-from .. import schemas, crud, database
+from fastapi import APIRouter, HTTPException, Depends, Request, Form
+from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from .. import schemas, crud, database
 from app.utils.sending_email import (
     send_confirmation_email,
     send_reset_password_email,
@@ -9,6 +13,9 @@ from app.utils.sending_email import (
 import os
 from datetime import timedelta
 from app.crud import generate_reset_token
+from pydantic.error_wrappers import ValidationError
+from pydantic import EmailStr
+import json
 
 
 BASE_URL = os.getenv("BASE_URL")
@@ -19,8 +26,12 @@ router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
+# Statis files and templates settings
+router.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
 
-@router.post("/register")
+
+@router.post("/register")  # to be deleted?
 async def register_user(
     user: schemas.UserRegister, db: Session = Depends(database.get_db)
 ):
@@ -59,6 +70,75 @@ async def register_user(
     print(f"User id: {new_user.id}")
 
     return schemas.UserResponse.from_orm(new_user)
+
+
+@router.post("/registered", response_class=HTMLResponse)
+async def register_user_from_form(
+    request: Request,
+    username: str = Form(...),
+    email: EmailStr = Form(...),
+    password: str = Form(...),
+    password2: str = Form(...),
+    db: Session = Depends(database.get_db),
+):
+    """
+    Processes user registration from form data.
+    Validates input fields and checks password confirmation. Creates a new user
+    in the database and sends a confirmation email with a unique token. Renders
+    an appropriate HTML template based on success or errors.
+    """
+    errors = []
+
+    if not (username and email and password and password2):
+        error_message = "All fields must be filled in."
+        errors.append(error_message)
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "errors": errors}
+        )
+
+    if password != password2:
+        error_message = "Passwords do not match"
+        errors.append(error_message)
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "errors": errors}
+        )
+
+    try:
+        # Creating a temporary object to verify validators from schemas.py
+        user_data = schemas.UserRegister(
+            username=username, email=email, password=password
+        )
+        crud.create_user(db, user_data)
+
+        confirmation_token = crud.create_access_token(
+            data={"sub": username}, expires_delta=timedelta(hours=1)
+        )
+        confirmation_link = (
+            f"{BASE_URL}/users/confirm?token={confirmation_token}"
+        )
+
+        await send_confirmation_email(email, confirmation_link)
+
+        return templates.TemplateResponse(
+            "confirmation.html", {"request": request, "email": email}
+        )
+
+    except ValidationError as e:
+        errors_list = json.loads(e.json())
+        for item in errors_list:
+            errors.append(item.get("msg"))
+        print(errors)
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "errors": errors}
+        )
+
+    except IntegrityError:
+        # Handle unique constraint violation error
+        db.rollback()
+        errors.append("Email/Username already registered.")
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "errors": errors}
+        )
 
 
 @router.post("/login")
@@ -109,7 +189,7 @@ async def login_user(
 
 @router.get("/confirm")
 async def confirm_registration(
-    token: str, db: Session = Depends(database.get_db)
+    request: Request, token: str, db: Session = Depends(database.get_db)
 ):
     """
     Endpoint to confirm user registration.
@@ -127,12 +207,7 @@ async def confirm_registration(
     user.is_confirmed = True
     db.commit()
 
-    return {
-        "message": (
-            "Email confirmed. "
-            "Please log in to complete the registration process."
-        )
-    }
+    return templates.TemplateResponse("confirmed.html", {"request": request})
 
 
 @router.post("/refresh")

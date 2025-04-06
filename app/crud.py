@@ -293,7 +293,8 @@ def remove_unconfirmed_users(db: Session):
     Removes unconfirmed users
     who have not confirmed their email within 1 hour.
     """
-    one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    # one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    one_hour_ago = datetime.utcnow() - timedelta(minutes=1)  # TEMP
     print(f"Current time (UTC): {datetime.utcnow()}")
     print(f"One hour ago (UTC): {one_hour_ago}")
     unconfirmed_users = (
