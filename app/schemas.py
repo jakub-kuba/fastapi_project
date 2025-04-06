@@ -10,30 +10,40 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
 
-    @validator('username')
+    @validator("username")
     def validate_username(cls, value):
         if not (3 <= len(value) <= 15):
-            raise ValueError('Username length must be between 3 and 15 characters')
-        if not re.match(r'^[a-zA-Z0-9_]+$', value):
             raise ValueError(
-                'Username must contain only alphanumeric characters or underscores'
+                "Username length must be between 3 and 15 characters"
+            )
+        if not re.match(r"^[a-zA-Z0-9_]+$", value):
+            raise ValueError(
+                "Username must contain only alphanumeric characters or underscores"
             )
         return value
 
-    @validator('password')
+    @validator("password")
     def validate_password(cls, value):
         if not (8 <= len(value) <= 30):
-            raise ValueError('Password length must be between 8 and 30 characters')
-        if not re.search(r'[A-Z]', value):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not re.search(r'[a-z]', value):
-            raise ValueError('Password must contain at least one lowercase letter')
-        if not re.search(r'[0-9]', value):
-            raise ValueError('Password must contain at least one number')
+            raise ValueError(
+                "Password length must be between 8 and 30 characters"
+            )
+        if not re.search(r"[A-Z]", value):
+            raise ValueError(
+                "Password must contain at least one uppercase letter"
+            )
+        if not re.search(r"[a-z]", value):
+            raise ValueError(
+                "Password must contain at least one lowercase letter"
+            )
+        if not re.search(r"[0-9]", value):
+            raise ValueError("Password must contain at least one number")
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
-            raise ValueError('Password must contain at least one special character')
-        if re.search(r'\s', value):
-            raise ValueError('Password must not contain whitespace characters')
+            raise ValueError(
+                "Password must contain at least one special character"
+            )
+        if re.search(r"\s", value):
+            raise ValueError("Password must not contain whitespace characters")
         return value
 
 
@@ -41,12 +51,12 @@ class UserLogin(BaseModel):
     username: constr(min_length=3, max_length=15)
     password: constr(min_length=8, max_length=30)
 
-    @validator('username')
+    @validator("username")
     def validate_username(cls, value):
-        if not re.match(r'^[a-zA-Z0-9_]+$', value):
+        if not re.match(r"^[a-zA-Z0-9_]+$", value):
             raise ValueError(
-                'Username must only contain alphanumeric characters '
-                'or underscores'
+                "Username must only contain alphanumeric characters "
+                "or underscores"
             )
         return value
 
@@ -75,16 +85,16 @@ class TuneCreate(BaseModel):
     description: Optional[constr(min_length=1, max_length=400)] = None
     demo: bool = False
 
-    @validator('difficulty')
+    @validator("difficulty")
     def validate_difficulty(cls, value):
         if value is not None and (value < 1 or value > 5):
-            raise ValueError('Difficulty must be between 1 and 5')
+            raise ValueError("Difficulty must be between 1 and 5")
         return value
 
-    @validator('progress')
+    @validator("progress")
     def validate_progress(cls, value):
         if value is not None and (value < 1 or value > 100):
-            raise ValueError('Progress must be between 1 and 100')
+            raise ValueError("Progress must be between 1 and 100")
         return value
 
 
@@ -98,16 +108,16 @@ class TuneUpdate(BaseModel):
     description: Optional[constr(min_length=1, max_length=250)]
     demo: Optional[bool]
 
-    @validator('difficulty')
+    @validator("difficulty")
     def validate_difficulty(cls, value):
         if value is not None and (value < 1 or value > 5):
-            raise ValueError('Difficulty must be between 1 and 5')
+            raise ValueError("Difficulty must be between 1 and 5")
         return value
 
-    @validator('progress')
+    @validator("progress")
     def validate_progress(cls, value):
         if value is not None and (value < 1 or value > 100):
-            raise ValueError('Progress must be between 1 and 100')
+            raise ValueError("Progress must be between 1 and 100")
         return value
 
 
