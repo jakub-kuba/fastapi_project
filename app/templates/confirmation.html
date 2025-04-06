@@ -1,0 +1,18 @@
+{% extends "template.html" %}
+{% block title %}Account registration confirmation{% endblock %}
+
+{% block content%}
+
+	<div class="top1"><a href="https://jakub-kuba.com"><img src="{{ url_for('static', path='main.png') }}" width="104" height="56" title="Home"></a></div>
+	<div class="top2"><a href="/"><img src="{{ url_for('static', path='acco3.png') }}" width="104" height="56" title="Accordion"></a></div>
+	<div class="top1"><a href="/"><img src="{{ url_for('static', path='back.png') }}" width="104" height="56" title="Back"></a></div>
+	<div style="clear:both;"></div>
+
+    <div class="bigrectangle">
+        <br><br>
+        An email has been sent to <b>{{email}}</b>. Click on the link in it to confirm your registration.
+    </div>
+    <div style="clear:both;"></div>
+
+
+{% endblock %}
