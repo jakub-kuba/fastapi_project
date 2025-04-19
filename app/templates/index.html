@@ -10,18 +10,18 @@
 	
 
 	<div class="rectangle1">
+	<br />
+		<p><b>SIGN IN</b></p>
+		<br /><br /><br /><br />
+		<form action="/users/logged" method="post">
+			Username:<br /><input type="text" required name="username" value="{{username}}"/><br /><br />
+			Password:<br /><input type="password" required name="password" value="{{password}}"/><br /></p>
+			<input class="index" type="submit" value="LOG IN" />
+		</form>
+		{% for error in errors_login %}
 		<br />
-			<p><b>SIGN IN</b></p>
-			<br /><br /><br /><br />
-			<form action="tunes" method="post">
-				Username:<br /><input type="text" required name="username" value="{{username}}"/><br /><br />
-				Password:<br /><input type="password" required name="password" value="{{password}}"/><br /></p>
-				<input class="index" type="submit" value="LOG IN" />
-			</form>
-			{% for error in errors_login %}
-			<br />
-			<p class="error-message">{{error}}</p>
-			{% endfor %}
+		<p class="error-message">{{error}}</p>
+		{% endfor %}
 	</div>
 	<div class="rectangle2">
 		<br />

@@ -13,3 +13,4 @@ hashed_password.py
 useful_code.py
 send_email.py
 errors_detected.txt
+pyproject.toml
