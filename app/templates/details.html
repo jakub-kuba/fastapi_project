@@ -1,0 +1,59 @@
+{% extends "template.html" %}
+{% block title %}Listen to music!{% endblock %}
+
+{% block content%}
+
+	<!-- <div class="top1"><a href="https://jakub-kuba.com"><img src="{{ url_for('static', path='main.png') }}" width="104" height="56" title="Home"></a></div> -->
+	<div class="top1"><a href="/"><img src="{{ url_for('static', path='acco3.png') }}" width="104" height="56" title="Accordion"></a></div>
+	<div class="top2"><a href="/users/logged"><img src="{{ url_for('static', path='back.png') }}" width="104" height="56" title="Back"></a></div>
+	<div class="top1"><a href="/users/logout" method="get">LOGOUT</a></div>
+	<div style="clear:both;"></div>
+
+    <div class="biggerrectangle" style="border-radius: 10px; position: relative;">
+        <div id="token-timer" style="position: absolute; top: 10px; right: 10px; font-weight: bold; color: #333;"></div>
+		<div style="position: absolute; top: 20px; left: 30px; font-weight: bold; font-size: 1.2em;">
+			Welcome, {{ username }}!
+		</div>
+        <br><br><br>    
+        <b>{{tune.title}}</b> - {{tune.composer}}<br>
+        <br><br>
+        <div class="textrectangle">
+            {{tune.description}}
+        </div><br><br><br><br>
+        {% set video_id = tune.link.split("v=")[1] if 'v=' in tune.link else tune.link %}
+        {% set embed_link = "https://www.youtube.com/embed/" + video_id %}
+        <br><br>
+        <div class="div-round" style="width: 700px; height: 394px; margin: 0 auto;">
+            <iframe class="iframe-round" allow="autoplay; encrypted-media; fullscreen" src="{{ embed_link|safe }}"></iframe>
+        </div>
+
+        <br><br><br>
+
+    </div>
+    <div style="clear:both;"></div>
+
+	<script>
+		let seconds = {{ expires_in }}; // temp
+		const display = document.getElementById('token-timer');
+	
+		function updateTimer() {
+			if (seconds <= 0) {
+				display.textContent = "Session expired";
+				// adding automatic redirect after expiration
+				// setTimeout(() => window.location.href = '/login', 2000);
+				return;
+			}
+			
+			const minutes = Math.floor(seconds / 60);
+			const sec = seconds % 60;
+			display.textContent = `Token expires in: ${minutes}m ${sec.toString().padStart(2, '0')}s`;
+			seconds--;
+			setTimeout(updateTimer, 1000);
+		}
+	
+		// Start licznika
+		updateTimer();
+	</script>
+
+
+{% endblock %}

@@ -14,7 +14,7 @@ conf = ConnectionConfig(
     MAIL_SERVER=os.getenv("EMAIL_HOST"),
     MAIL_TLS=os.getenv("EMAIL_USE_SSL", "False").lower() != "true",
     MAIL_SSL=os.getenv("EMAIL_USE_SSL", "False").lower() == "true",
-    MAIL_FROM_NAME="accordion.jakub-kuba.com"
+    MAIL_FROM_NAME="accordion.jakub-kuba.com",
 )
 
 
@@ -29,7 +29,7 @@ async def send_confirmation_email(email: EmailStr, confirmation_link: str):
             "If you do not confirm your email within one hour, "
             "your account will be deleted."
         ),
-        subtype="html"
+        subtype="html",
     )
 
     fm = FastMail(conf)
@@ -54,7 +54,7 @@ async def send_reset_password_email(email: EmailStr, reset_token: str):
             f"<a href='{reset_link}'>Reset Password</a>. "
             "This link is valid for 1 hour."
         ),
-        subtype="html"
+        subtype="html",
     )
 
     fm = FastMail(conf)

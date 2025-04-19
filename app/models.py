@@ -19,7 +19,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     token_version = Column(Integer, default=0)
     refresh_token_version = Column(Integer, default=0)
-    role = Column(String, default='user')
+    role = Column(String, default="user")
 
     reset_token = Column(String, nullable=True, unique=True)
     reset_token_expiry = Column(DateTime, nullable=True)

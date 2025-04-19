@@ -17,7 +17,7 @@ from app.models import User, Proposals, Base
 def setup_database():
     """Fixture to set up the in-memory SQLite database and session."""
     # Create an in-memory SQLite database
-    engine = create_engine('sqlite:///:memory:')
+    engine = create_engine("sqlite:///:memory:")
 
     # Enable foreign key support for SQLite
     @event.listens_for(engine, "connect")
@@ -45,8 +45,11 @@ def test_create_user(setup_database):
     session = setup_database
 
     # Create a test user
-    new_user = User(username="testuser",
-                    email="testuser@example.com", password="securepassword")
+    new_user = User(
+        username="testuser",
+        email="testuser@example.com",
+        password="securepassword",
+    )
     session.add(new_user)
     session.commit()
 
@@ -63,20 +66,28 @@ def test_create_proposal(setup_database):
     session = setup_database
 
     # Create a test user
-    new_user = User(username="testuser2",
-                    email="testuser2@example.com", password="securepassword")
+    new_user = User(
+        username="testuser2",
+        email="testuser2@example.com",
+        password="securepassword",
+    )
     session.add(new_user)
     session.commit()
 
     # Create a proposal for the user
-    new_proposal = Proposals(user_id=new_user.id, title="Test Proposal",
-                             composer="Test Composer", info="Some info")
+    new_proposal = Proposals(
+        user_id=new_user.id,
+        title="Test Proposal",
+        composer="Test Composer",
+        info="Some info",
+    )
     session.add(new_proposal)
     session.commit()
 
     # Retrieve the proposal from the database
-    saved_proposal = session.query(Proposals).filter_by(
-        title="Test Proposal").first()
+    saved_proposal = (
+        session.query(Proposals).filter_by(title="Test Proposal").first()
+    )
 
     assert saved_proposal is not None
     assert saved_proposal.title == "Test Proposal"
@@ -89,8 +100,11 @@ def test_relationship_between_user_and_proposal(setup_database):
     session = setup_database
 
     # Create a test user
-    new_user = User(username="testuser3",
-                    email="testuser3@example.com", password="securepassword")
+    new_user = User(
+        username="testuser3",
+        email="testuser3@example.com",
+        password="securepassword",
+    )
     session.add(new_user)
     session.commit()
 
@@ -99,15 +113,18 @@ def test_relationship_between_user_and_proposal(setup_database):
         user_id=new_user.id,
         title="Proposal for Relationship Test",
         composer="Composer X",
-        info="Info X"
+        info="Info X",
     )
     session.add(new_proposal)
     session.commit()
 
     # Retrieve the user and their proposal
     saved_user = session.query(User).filter_by(username="testuser3").first()
-    saved_proposal = session.query(Proposals).filter_by(
-        title="Proposal for Relationship Test").first()
+    saved_proposal = (
+        session.query(Proposals)
+        .filter_by(title="Proposal for Relationship Test")
+        .first()
+    )
 
     assert saved_user is not None
     assert saved_proposal is not None

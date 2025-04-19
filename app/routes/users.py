@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -16,6 +16,7 @@ from app.crud import generate_reset_token
 from pydantic.error_wrappers import ValidationError
 from pydantic import EmailStr
 import json
+import httpx
 
 
 BASE_URL = os.getenv("BASE_URL")
@@ -187,6 +188,182 @@ async def login_user(
     }
 
 
+@router.post("/logged", response_class=HTMLResponse)
+async def login_user_from_form(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(database.get_db),
+):
+    errors_login = []
+
+    # Authenticate user
+    authenticated_user = crud.authenticate_user(
+        db, username=username, password=password
+    )
+
+    if not authenticated_user:
+        errors_login.append("Incorrect email or password")
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "errors_login": errors_login}
+        )
+
+    # Check if user confirmed email
+    if not authenticated_user.is_confirmed:
+        errors_login.append("Please confirm your email before logging in")
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "errors_login": errors_login}
+        )
+
+    # Get current token version
+    current_token_version = authenticated_user.token_version
+
+    # Generate JWT tokens
+    access_token = crud.create_access_token(
+        data={"sub": username, "version": current_token_version}
+    )
+
+    print("DEBUG - token generated in /logged:")
+    print(access_token)
+
+    refresh_token = crud.create_refresh_token(authenticated_user)
+
+    expires_in = crud.get_token_expiration(access_token)
+
+    print("expires_in:", expires_in)
+
+    # Get content for tunes table (assuming admin=False by default)
+    is_admin = False
+    music_entries = crud.get_tunes_table_content(
+        db, authenticated_user, is_admin
+    )
+
+    # Prepare response with template
+    response = templates.TemplateResponse(
+        "tunes.html",
+        {
+            "request": request,
+            "username": username,
+            "ready_tunes": music_entries,
+            "expires_in": expires_in,
+        },
+    )
+
+    # Set tokens in HTTP-only cookies
+    response.set_cookie(
+        key="access_token", value=access_token, httponly=True, samesite="lax"
+    )
+    response.set_cookie(
+        key="refresh_token", value=refresh_token, httponly=True, samesite="lax"
+    )
+
+    # # Optional: set session info (if using SessionMiddleware)
+    # request.session["user"] = username
+
+    return response
+
+
+@router.get("/logged", response_class=HTMLResponse)
+async def refresh_via_cookie(
+    request: Request, db: Session = Depends(database.get_db)
+):
+    refresh_token = request.cookies.get("refresh_token")
+
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401, detail="No refresh token provided"
+        )
+
+    user = crud.verify_refresh_token(refresh_token, db)
+    if not user:
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired refresh token"
+        )
+
+    access_token = crud.create_access_token(
+        data={"sub": user.username, "version": user.token_version}
+    )
+    new_refresh_token = crud.create_refresh_token(user)
+
+    expires_in = crud.get_token_expiration(access_token)
+
+    music_entries = crud.get_tunes_table_content(
+        db, user_authenticated=True, is_admin=False
+    )
+
+    response = templates.TemplateResponse(
+        "tunes.html",
+        {
+            "request": request,
+            "username": user.username,
+            "ready_tunes": music_entries,
+            "expires_in": expires_in,
+        },
+    )
+
+    response.set_cookie(
+        "access_token", access_token, httponly=True, samesite="lax"
+    )
+    response.set_cookie(
+        "refresh_token", new_refresh_token, httponly=True, samesite="lax"
+    )
+
+    return response
+
+
+@router.get("/details/{tune_id}", name="details", response_class=HTMLResponse)
+async def tune_details(
+    request: Request,
+    tune_id: int,
+    db: Session = Depends(database.get_db),
+):
+    # Get access token from cookie
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Verify the token and get the logged-in user
+    user = crud.get_logged_in_user(db, token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    # Fetch the tune details from the database
+    tune = crud.get_tune_by_id(db, tune_id)
+    if tune is None:
+        raise HTTPException(status_code=404, detail="Tune not found")
+
+    # Check if the tune is a demo tune or if the user has permission to view it
+    if not tune.demo and not user.is_admin:
+        raise HTTPException(
+            status_code=403, detail="You are not authorized to view this tune"
+        )
+
+    # Generate access token (can be refreshed here if needed)
+    access_token = crud.create_access_token(
+        data={"sub": user.username, "version": user.token_version}
+    )
+
+    expires_in = crud.get_token_expiration(access_token)
+
+    # Prepare response with template
+    response = templates.TemplateResponse(
+        "details.html",
+        {
+            "request": request,
+            "tune": tune,
+            "username": user.username,
+            "expires_in": expires_in,
+        },
+    )
+
+    # Set the new access token in HTTP-only cookies
+    response.set_cookie(
+        key="access_token", value=access_token, httponly=True, samesite="lax"
+    )
+
+    return response
+
+
 @router.get("/confirm")
 async def confirm_registration(
     request: Request, token: str, db: Session = Depends(database.get_db)
@@ -332,6 +509,26 @@ async def logout_user(
     crud.logout_user(db, user)
 
     return {"message": f"{user.username} successfully logged out"}
+
+
+@router.get("/logout", name="logout")
+async def logout(request: Request):
+    access_token = request.cookies.get("access_token")
+
+    if access_token:
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{BASE_URL}/logout",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+        except Exception as e:
+            print("Logout request failed:", e)
+
+    response = RedirectResponse(url="/", status_code=302)
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return response
 
 
 @router.get("/proposals")

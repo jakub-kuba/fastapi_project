@@ -16,6 +16,11 @@ from app.crud import (
 )
 from datetime import datetime
 
+
+# TEMPORARY
+print("system timestamp:", datetime.utcnow().timestamp())
+print("utcnow:", datetime.utcnow())
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
