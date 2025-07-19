@@ -329,14 +329,9 @@ async def tune_details(
 
     # Fetch the tune details from the database
     tune = crud.get_tune_by_id(db, tune_id)
-    if tune is None:
-        raise HTTPException(status_code=404, detail="Tune not found")
 
-    # Check if the tune is a demo tune or if the user has permission to view it
-    if not tune.demo and not user.is_admin:
-        raise HTTPException(
-            status_code=403, detail="You are not authorized to view this tune"
-        )
+    if tune is None or tune.link is None:
+        raise HTTPException(status_code=404, detail="Tune not found")
 
     # Generate access token (can be refreshed here if needed)
     access_token = crud.create_access_token(
